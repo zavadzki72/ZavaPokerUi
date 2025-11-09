@@ -1,0 +1,25 @@
+/* src/styles/RoomHeader.css */
+.room-header-component {
+    padding: 15px 30px;
+    background-color: var(--color-card-bg);
+    border-bottom: 1px solid var(--color-primary);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  
+  .room-header-component h1 {
+    margin: 0;
+    font-size: 1.2em;
+    color: var(--color-primary);
+  }
+  
+  .room-header-user-info {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+  }
+  
+  .room-header-user-info span {
+    font-weight: bold;
+  }

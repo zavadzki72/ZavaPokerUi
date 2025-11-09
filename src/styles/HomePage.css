@@ -1,0 +1,135 @@
+/* src/styles/HomePage.css - NOVA VERSÃO */
+
+/* Layout Geral da Página */
+.home-page-layout {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+  }
+  
+  /* 1. Header */
+  .home-header {
+    padding: 20px 5%; /* 5% de margem lateral */
+    background-color: var(--color-background);
+    border-bottom: 1px solid var(--color-primary);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 4px 10px rgba(138, 43, 226, 0.1);
+  }
+  
+  .logo-container {
+    display: flex;
+    align-items: center;
+    color: var(--color-text);
+  }
+  
+  /* 2. Conteúdo Principal (Hero) */
+  .home-main-content {
+    flex: 1; /* Ocupa o espaço restante */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    max-width: 1200px; /* Limita a largura do conteúdo */
+    margin: 0 auto;
+    padding: 40px 5%;
+  }
+  
+  .home-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    align-items: center;
+    gap: 60px; /* Espaço entre o texto e o formulário */
+  }
+  
+  /* Coluna da Esquerda (Texto) */
+  .home-hero-text h1 {
+    font-size: 3.5rem; /* Título grande */
+    font-weight: 700;
+    margin-bottom: 20px;
+    line-height: 1.2;
+  }
+  
+  .home-hero-text h1 span {
+    color: var(--color-primary);
+  }
+  
+  .home-hero-text p {
+    font-size: 1.2rem;
+    opacity: 0.8;
+    margin-bottom: 20px;
+  }
+  
+  /* Coluna da Direita (Formulário) */
+  .home-login-area {
+    width: 100%;
+  }
+  
+  /* 3. Footer */
+  .home-footer {
+    text-align: center;
+    padding: 20px 5%;
+    background-color: var(--color-card-bg);
+    border-top: 1px solid var(--color-primary);
+    color: var(--color-text);
+    opacity: 0.7;
+  }
+  
+  /* 4. Caixa de Login (Reutilizada) */
+  .home-box {
+    width: 100%;
+    padding: 30px;
+    background-color: var(--color-card-bg);
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    border: 1px solid var(--color-primary);
+  }
+  
+  .home-tabs {
+    display: flex;
+    margin-bottom: 20px;
+    border-bottom: 2px solid var(--color-background);
+  }
+  
+  .home-tab {
+    flex: 1;
+    padding: 10px;
+    text-align: center;
+    cursor: pointer;
+    background-color: transparent;
+    color: var(--color-text);
+    opacity: 0.6;
+    border: none;
+    font-size: 1em;
+    font-weight: bold;
+  }
+  
+  .home-tab.active {
+    color: var(--color-primary);
+    opacity: 1;
+    border-bottom: 3px solid var(--color-primary);
+    transform: translateY(2px);
+  }
+  
+  .home-tab-content {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+  }
+  
+  /* 5. Responsividade */
+  @media (max-width: 900px) {
+    .home-grid {
+      grid-template-columns: 1fr; /* Coluna única em mobile */
+    }
+    
+    .home-hero-text {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+  
+    .home-hero-text h1 {
+      font-size: 2.5rem;
+    }
+  }

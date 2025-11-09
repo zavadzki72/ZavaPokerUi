@@ -1,0 +1,27 @@
+.room-layout-container {
+    display: grid;
+    grid-template-areas:
+      "header header"
+      "main   sidebar";
+    grid-template-rows: auto 1fr;
+    grid-template-columns: 1fr 350px;
+    height: 100vh;
+    overflow: hidden;
+    background-color: var(--color-background);
+  }
+  
+  .room-header { grid-area: header; }
+  .room-main   { grid-area: main; }
+  .room-sidebar { grid-area: sidebar; }
+  
+  @media (max-width: 900px) {
+    .room-layout-container {
+      grid-template-areas:
+        "header"
+        "main"
+        "sidebar";
+      grid-template-columns: 1fr;
+      grid-template-rows: auto 1fr auto;
+      overflow: auto;
+    }
+  }
