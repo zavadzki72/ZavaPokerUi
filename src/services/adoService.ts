@@ -1,12 +1,6 @@
-export interface AdoWorkItem {
-    id: string;
-    type: 'Bug' | 'Product Backlog Item' | 'Task';
-    title: string;
-    url: string;
-    description: string;
-  }
-  
-  export const getWorkItemDetails = (id: string): Promise<AdoWorkItem> => {
+import type { AdoWorkItem } from "../types/adoWorkItem";
+
+export const getWorkItemDetails = (id: string): Promise<AdoWorkItem> => {
     console.log(`Simulando fetch da API do ADO para o item: ${id}`);
     
     const mockItem: AdoWorkItem = {

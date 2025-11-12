@@ -1,8 +1,12 @@
+// Ficheiro: src/contexts/UserContext.tsx
+// (Atualizado para criar e gerir um UserId persistente)
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
 type UserRole = 'votante' | 'espectador';
 
 interface UserContextType {
+  userId: string; // NOVO: O ID persistente
   userName: string;
   setUserName: (name: string) => void;
   userRole: UserRole;
@@ -13,11 +17,22 @@ interface UserContextType {
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
+const USER_ID_KEY = 'planning_poker_user_id'; // NOVO
 const USER_NAME_KEY = 'planning_poker_user_name';
 const USER_ROLE_KEY = 'planning_poker_user_role';
 const USER_ADMIN_KEY = 'planning_poker_user_admin';
 
 export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  // NOVO: Gerar o UserId uma única vez
+  const [userId] = useState<string>(() => {
+    let storedUserId = sessionStorage.getItem(USER_ID_KEY);
+    if (!storedUserId) {
+      storedUserId = crypto.randomUUID();
+      sessionStorage.setItem(USER_ID_KEY, storedUserId);
+    }
+    return storedUserId;
+  });
+  
   const [userName, setUserNameState] = useState<string>(() => {
     return sessionStorage.getItem(USER_NAME_KEY) || '';
   });
@@ -26,9 +41,10 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return (sessionStorage.getItem(USER_ROLE_KEY) as UserRole) || 'votante';
   });
   
-  const [isAdm, setIsAdmState] = useState<boolean>(() => {
-    return sessionStorage.getItem(USER_ADMIN_KEY) === 'true';
-  });
+  // ATENÇÃO: O 'isAdm' é o único estado que NÃO queremos que
+  // seja persistido cegamente. O backend é que deve dizer.
+  // Vamos iniciá-lo como 'false' e deixar o backend confirmar.
+  const [isAdm, setIsAdmState] = useState<boolean>(false);
 
   useEffect(() => {
     if (userName) {
@@ -42,6 +58,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     sessionStorage.setItem(USER_ROLE_KEY, userRole);
   }, [userRole]);
   
+  // Vamos guardar o isAdm, mas teremos cuidado
   useEffect(() => {
     sessionStorage.setItem(USER_ADMIN_KEY, String(isAdm));
   }, [isAdm]);
@@ -59,7 +76,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <UserContext.Provider value={{ userName, setUserName, userRole, setUserRole, isAdm, setIsAdm }}>
+    <UserContext.Provider value={{ userId, userName, setUserName, userRole, setUserRole, isAdm, setIsAdm }}>
       {children}
     </UserContext.Provider>
   );

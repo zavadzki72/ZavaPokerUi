@@ -1,3 +1,6 @@
+/* Ficheiro: src/styles/VoteCard.css */
+/* (Adicionado estilo para o nome) */
+
 .voting-pack-container {
     display: flex;
     flex-wrap: wrap;
@@ -36,3 +39,26 @@
     color: var(--color-primary-text);
     transform: translateY(-2px) scale(1.05);
   }
+
+/* NOVO: Estilos para o conteúdo do cartão */
+.vote-card-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.vote-card-value {
+  font-size: 1.2em; /* O valor principal */
+}
+
+.vote-card-name {
+  font-size: 0.5em; /* O nome, mais pequeno */
+  font-weight: normal;
+  margin-top: 8px;
+  max-width: 70px; /* Garante que não quebra o layout */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

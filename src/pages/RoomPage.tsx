@@ -1,13 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useUser } from '../contexts/UserContext';
 import { useSignalR } from '../contexts/SignalRContext';
 import { Button } from '../components/Button';
 import { VotingPack } from '../components/VotingPack';
-import { getWorkItemDetails, type AdoWorkItem as AdoWorkItemType } from '../services/adoService';
 import { RoomHeader } from '../components/RoomHeader';
 import { RoomSidebar } from '../components/RoomSidebar';
 import { VotingStage } from '../components/VotingStage';
+import { type Participant } from '../types/participant'; 
+// Importa o tipo ADO do único sítio correto
+import { type AdoWorkItem as AdoWorkItemType } from '../types/adoWorkItem'; 
 
 const packOptions = {
   fibonacci: ['0', '1', '2', '3', '5', '8', '13', '21', '?', '☕'],
@@ -19,8 +21,11 @@ type PackType = keyof typeof packOptions;
 
 export const RoomPage: React.FC = () => {
   const { roomId } = useParams<{ roomId: string }>();
-  const { userName, userRole, setUserRole, isAdm, setIsAdm } = useUser();
+  const navigate = useNavigate(); 
+  const { userId, userName, userRole, setUserRole, isAdm, setIsAdm } = useUser();
   const { connection } = useSignalR();
+  
+  // --- Estados ---
   const [message, setMessage] = useState("Aguardando eventos...");
   const [selectedVote, setSelectedVote] = useState<string | null>(null);
   const [activePack, setActivePack] = useState<PackType>('fibonacci');
@@ -28,80 +33,146 @@ export const RoomPage: React.FC = () => {
   const [loadedWorkItem, setLoadedWorkItem] = useState<AdoWorkItemType | null>(null);
   const [isLoadingItem, setIsLoadingItem] = useState(false);
   const [isRevealed, setIsRevealed] = useState(false);
+  const [participants, setParticipants] = useState<Participant[]>([]);
 
+  // Efeito 1: Guarda de Autenticação (Verifica se o utilizador tem ID e Nome)
   useEffect(() => {
-    if (!connection || !userName || !roomId) return;
-    const user = { userName, roomId, userRole, isAdm };
-    connection.invoke("JoinRoom", user)
-      .then(() => console.log(`Utilizador ${userName} (${userRole}) entrou na sala ${roomId}. ADM: ${isAdm}`))
-      .catch(err => console.error("Erro ao entrar na sala: ", err));
-      
-    const handleReceiveMessage = (receivedMessage: string) => {
-      setMessage(receivedMessage);
+    if (!userName || !userId) {
+      navigate('/');
+    }
+  }, [userName, userId, navigate]); 
+  
+  // Efeito 2: Lógica da Sala (O mais importante)
+  useEffect(() => {
+    // Aguarda que tudo esteja pronto
+    if (!connection || !userName || !roomId || !userId) {
+      return; 
+    }
+    
+    // --- 1. REGISTAR OS LISTENERS PRIMEIRO ---
+    
+    const handleReceiveMessage = (receivedMessage: string) => { setMessage(receivedMessage); };
+    const handleAdminStatusChange = (isAdmin: boolean) => { setIsAdm(isAdmin); };
+    const handleParticipantList = (participantsList: Participant[]) => { setParticipants(participantsList); };
+    
+    const handleRevealState = (state: boolean) => {
+      setIsRevealed(state);
+      if (state === false) {
+        setSelectedVote(null);
+      }
     };
-    const handleAdminStatusChange = (isAdmin: boolean) => {
-      setIsAdm(isAdmin);
+    
+    const handleReceiveVotePack = (packName: PackType) => {
+      setActivePack(packName);
     };
+    
+    const handleReceiveWorkItem = (item: AdoWorkItemType | null) => {
+      setLoadedWorkItem(item); 
+      setIsLoadingItem(false); 
+      if (item === null) {
+        setAdoWorkItemId(''); 
+      }
+    };
+    
     connection.on("ReceiveMessage", handleReceiveMessage);
     connection.on("ReceiveAdminStatus", handleAdminStatusChange);
+    connection.on("ReceiveRevealState", handleRevealState);
+    connection.on("UpdateUserList", handleParticipantList); 
+    connection.on("ReceiveVotePack", handleReceiveVotePack); 
+    connection.on("ReceiveWorkItem", handleReceiveWorkItem); 
+
     
-    // connection.on("ReceiveRevealState", (state: boolean) => {
-    //   setIsRevealed(state);
-    // });
+    // --- 2. INVOCAR O 'JoinRoom' DEPOIS ---
     
+    const user = { userId, userName, roomId, userRole };
+    connection.invoke("JoinRoom", user)
+      .catch(err => console.error("Erro ao entrar na sala: ", err));
+    
+    
+    // --- 3. FUNÇÃO DE LIMPEZA (CLEANUP) ---
     return () => {
       connection.off("ReceiveMessage", handleReceiveMessage);
       connection.off("ReceiveAdminStatus", handleAdminStatusChange);
-      // connection.off("ReceiveRevealState");
+      connection.off("ReceiveRevealState", handleRevealState);
+      connection.off("UpdateUserList", handleParticipantList);
+      connection.off("ReceiveVotePack", handleReceiveVotePack); 
+      connection.off("ReceiveWorkItem", handleReceiveWorkItem); 
     };
-  }, [connection, userName, roomId, userRole, isAdm, setIsAdm]);
+    
+    // CORREÇÃO DO LOOP INFINITO: 'isAdm' foi removido deste array
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [connection, userName, roomId, userRole, userId, setIsAdm, navigate]); 
+  
+  
+  // --- Handlers ---
 
   const handleVote = (vote: string) => {
-    if (userRole !== 'votante') return;
-    if (selectedVote === vote) {
-      setSelectedVote(null);
-    } else {
-      setSelectedVote(vote);
+    if (userRole !== 'votante' || !connection) return; 
+    let newVote: string | null = vote;
+    if (selectedVote === vote) newVote = null; 
+    setSelectedVote(newVote); 
+    if (roomId) {
+      connection.invoke("SubmitVote", roomId, newVote)
+        .catch(err => console.error("Erro ao enviar voto: ", err));
     }
   };
 
   const toggleUserRole = () => {
     const newRole = userRole === 'votante' ? 'espectador' : 'votante';
-    setUserRole(newRole);
+    setUserRole(newRole); 
     if (newRole === 'espectador') {
       setSelectedVote(null);
+    }
+    if (connection && roomId) {
+      connection.invoke("ChangeRole", roomId, newRole)
+        .catch(err => console.error("Erro ao mudar de role: ", err));
     }
   };
   
   const handlePackChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newPackName = e.target.value as PackType;
-    setActivePack(newPackName);
-    setSelectedVote(null); 
-    setIsRevealed(false);
+    if (connection && roomId) {
+      connection.invoke("ChangeVotePack", roomId, newPackName)
+        .catch(err => console.error("Erro ao mudar o pack: ", err));
+    }
   };
   
   const handleLoadWorkItem = async () => {
-    if (!adoWorkItemId) return;
-    setIsLoadingItem(true);
-    setLoadedWorkItem(null);
-    setIsRevealed(false);
-    
-    try {
-      const item = await getWorkItemDetails(adoWorkItemId);
-      setLoadedWorkItem(item);
-    } catch (error) {
-      console.error("Erro ao carregar (mock) work item:", error);
-    } finally {
-      setIsLoadingItem(false);
+    if (!adoWorkItemId || !connection || !roomId) return;
+    setIsLoadingItem(true); 
+    connection.invoke("LoadWorkItem", roomId, adoWorkItemId)
+      .catch(err => {
+        console.error("Erro ao carregar item: ", err);
+        setIsLoadingItem(false); 
+      });
+  };
+
+  const handleClearWorkItem = () => {
+    if (connection && roomId) {
+      connection.invoke("ClearWorkItem", roomId)
+        .catch(err => console.error("Erro ao limpar item: ", err));
     }
   };
   
   const handleRevealToggle = () => {
-    const newState = !isRevealed;
-    setIsRevealed(newState);
-    
-    // connection?.invoke("ToggleVotes", roomId, newState);
+    if (connection && roomId) {
+      connection.invoke("ToggleVotes", roomId)
+        .catch(err => console.error("Erro ao alternar votos: ", err));
+    }
   };
+  
+  // Envia o UserId do alvo
+  const handleTransferAdmin = (newAdminUserId: string) => {
+    if (connection && roomId) {
+      connection.invoke("TransferAdmin", roomId, newAdminUserId)
+        .catch(err => console.error("Erro ao transferir admin: ", err));
+    }
+  };
+
+  // Renderização
+  if (!userName) {
+    return <div>A carregar...</div>;
+  }
 
   return (
     <div className="room-layout-container">
@@ -114,6 +185,8 @@ export const RoomPage: React.FC = () => {
       <main className="room-main-component room-main">
         <VotingStage 
           isRevealed={isRevealed} 
+          participants={participants}
+          activePack={activePack} 
         />
         
         {userRole === 'votante' ? (
@@ -131,15 +204,19 @@ export const RoomPage: React.FC = () => {
 
       <RoomSidebar
         isAdm={isAdm}
+        myUserId={userId} // Passa o seu próprio ID
         activePack={activePack}
         onPackChange={handlePackChange}
         adoWorkItemId={adoWorkItemId}
         onAdoIdChange={setAdoWorkItemId}
         onLoadAdoItem={handleLoadWorkItem}
+        onClearAdoItem={handleClearWorkItem} 
         isLoadingAdoItem={isLoadingItem}
         loadedWorkItem={loadedWorkItem}
         isRevealed={isRevealed}
         onRevealToggle={handleRevealToggle}
+        participants={participants}
+        onTransferAdmin={handleTransferAdmin} 
       />
       
       <Button 
@@ -149,8 +226,9 @@ export const RoomPage: React.FC = () => {
         Mudar para {userRole === 'votante' ? 'Espectador' : 'Votante'}
       </Button>
       
-      <div style={{ position: 'absolute', bottom: '10px', left: '20px', background: 'black', color: 'lime', padding: '10px', fontSize: '12px' }}>
+       <div style={{ position: 'absolute', bottom: '10px', left: '20px', background: 'black', color: 'lime', padding: '10px', fontSize: '12px', zIndex: 100 }}>
         <p>Log: {message}</p>
+        <p>Estou Admin? {isAdm ? 'Sim' : 'Não'}</p> 
       </div>
 
     </div>

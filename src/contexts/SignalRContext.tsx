@@ -24,16 +24,22 @@ export const SignalRProvider: React.FC<{ children: React.ReactNode }> = ({ child
       .configureLogging(LogLevel.Information)
       .build();
 
-    setConnection(newConnection);
+    // NÃO faças setConnection(newConnection) aqui.
+    // Isso é que causa a race condition.
 
     newConnection.start()
-      .then(() => console.log('SignalR Conectado!'))
+      .then(() => {
+        console.log('SignalR Conectado!');
+        // SÓ DEPOIS de estar ligado é que o fornecemos ao React.
+        setConnection(newConnection);
+      })
       .catch(err => console.error('Falha na conexão com SignalR: ', err));
 
     return () => {
+      // Garante que a ligação é fechada quando o provider é desmontado
       newConnection.stop();
     };
-  }, []);
+  }, []); // O array vazio [] garante que isto só corre UMA VEZ.
 
   return (
     <SignalRContext.Provider value={{ connection }}>
