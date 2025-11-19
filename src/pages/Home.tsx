@@ -50,10 +50,16 @@ export const Home: React.FC = () => {
         createForm.userName
       );
       
+      console.log('✅ Room created successfully:', roomId);
+      
       localStorage.setItem('zava-poker-username', createForm.userName);
-      navigate(`/room/${roomId}`);
+      
+      setTimeout(() => {
+        navigate(`/room/${roomId}`);
+      }, 100);
     } catch (error: any) {
-      alert(error.message || 'Erro ao criar sala');
+      console.error('❌ Failed to create room:', error);
+      alert(error.message || 'Erro ao criar sala. Verifique se você não está em outra sala.');
     } finally {
       setLoading(false);
     }
@@ -76,7 +82,6 @@ export const Home: React.FC = () => {
 
   return (
     <div className="min-h-[calc(100vh-180px)] flex flex-col">
-      {/* Hero Section */}
       <section className="flex-1 flex items-center justify-center px-4 py-16 bg-gradient-to-br from-primary-50 to-blue-50 dark:from-gray-900 dark:to-gray-800">
         <div className="container mx-auto">
           <div className="text-center max-w-4xl mx-auto">
@@ -119,7 +124,6 @@ export const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* Features Section */}
       <section className="py-20 px-4 bg-white dark:bg-gray-900">
         <div className="container mx-auto">
           <div className="text-center mb-16">
@@ -171,7 +175,6 @@ export const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* Create Room Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 animate-fade-in">
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-md w-full p-8 animate-slide-up">
@@ -246,7 +249,6 @@ export const Home: React.FC = () => {
         </div>
       )}
 
-      {/* Join Room Modal */}
       {showJoinModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 animate-fade-in">
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-md w-full p-8 animate-slide-up">

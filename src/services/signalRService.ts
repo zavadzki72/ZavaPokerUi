@@ -163,6 +163,12 @@ class SignalRService {
     if (!this.connection) throw new Error('Not connected');
     await this.connection.invoke('ChangeVotePackage', roomId, votePackageId);
   }
+
+  async getRoomState(roomId: string): Promise<RoomState> {
+    console.log('📤 SignalR: GetUsersInRoom', { roomId });
+    if (!this.connection) throw new Error('Not connected');
+    return await this.connection.invoke('GetUsersInRoom', roomId);
+  }
 }
 
 export const signalRService = new SignalRService();

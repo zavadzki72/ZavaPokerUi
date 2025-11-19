@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { 
-  Crown, Eye, User, Check, Copy, Settings, LogOut, 
-  RefreshCw, Play, Trash2, UserCog 
+import {
+  Crown, Eye, User, Check, Copy, Settings, LogOut,
+  RefreshCw, Play, Trash2, UserCog
 } from 'lucide-react';
 import { RoomState, VotePackage } from '../types';
 import { signalRService } from '../services/signalRService';
@@ -10,7 +10,7 @@ import { signalRService } from '../services/signalRService';
 export const Room: React.FC = () => {
   const { roomId } = useParams<{ roomId: string }>();
   const navigate = useNavigate();
-  
+
   const [roomState, setRoomState] = useState<RoomState | null>(null);
   const [userName] = useState(() => localStorage.getItem('zava-poker-username') || '');
   const [selectedVote, setSelectedVote] = useState<string | null>(null);
@@ -25,25 +25,34 @@ export const Room: React.FC = () => {
     }
 
     setupRoom();
-    
+
     return () => {
-      if (userName) {
-        signalRService.leaveRoom(userName).catch(console.error);
-      }
+      signalRService.off('UpdateUserList', handleRoomUpdate);
+      signalRService.off('VoteSubmitted', handleRoomUpdate);
+      signalRService.off('RoomDestroyed', handleRoomDestroyed);
+
+      signalRService.leaveRoom(userName).catch(err => {
+        console.log('User already left or room destroyed:', err);
+      });
     };
-  }, [roomId, userName, navigate]);
+  }, []);
 
   const setupRoom = async () => {
     try {
       await signalRService.connect();
-      
+
+      if (roomId) {
+        const initialState = await signalRService.getRoomState(roomId);
+        setRoomState(initialState);
+      }
+
       const packages = await signalRService.getVotePackages();
       setVotePackages(packages);
 
       signalRService.on('UpdateUserList', handleRoomUpdate);
       signalRService.on('VoteSubmitted', handleRoomUpdate);
       signalRService.on('RoomDestroyed', handleRoomDestroyed);
-      
+
     } catch (error) {
       console.error('Failed to setup room', error);
       alert('Erro ao conectar à sala');
@@ -68,7 +77,7 @@ export const Room: React.FC = () => {
 
   const handleVote = async (value: string) => {
     if (!isPlayer || !roomId) return;
-    
+
     try {
       setSelectedVote(value);
       await signalRService.submitVote(userName, value);
@@ -118,7 +127,7 @@ export const Room: React.FC = () => {
 
   const handleTransferOwnership = async (newOwnerName: string) => {
     if (!roomId || newOwnerName === userName) return;
-    
+
     if (confirm(`Transferir moderação para ${newOwnerName}?`)) {
       try {
         await signalRService.toggleOwner(roomId, newOwnerName);
@@ -130,7 +139,7 @@ export const Room: React.FC = () => {
 
   const handleDestroyRoom = async () => {
     if (!roomId) return;
-    
+
     if (confirm('Tem certeza que deseja encerrar a sala? Todos os participantes serão desconectados.')) {
       try {
         await signalRService.destroyRoom(roomId);
@@ -160,11 +169,11 @@ export const Room: React.FC = () => {
 
   const calculateVoteStats = () => {
     if (!roomState?.areCardsRevealed) return null;
-    
+
     const votes = roomState.users
       .filter(u => u.role === 'Player' && u.vote)
       .map(u => u.vote!);
-    
+
     if (votes.length === 0) return null;
 
     const voteCounts: Record<string, number> = {};
@@ -261,7 +270,7 @@ export const Room: React.FC = () => {
                   <Crown className="w-5 h-5" />
                   <h2 className="text-xl font-bold">Painel de Moderação</h2>
                 </div>
-                
+
                 <div className="flex flex-wrap gap-3">
                   <button
                     onClick={handleStartNewRound}
@@ -270,7 +279,7 @@ export const Room: React.FC = () => {
                     <Play className="w-4 h-4" />
                     Nova Rodada
                   </button>
-                  
+
                   <button
                     onClick={handleRevealCards}
                     disabled={roomState.areCardsRevealed || !allVoted}
@@ -295,7 +304,7 @@ export const Room: React.FC = () => {
                 <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
                   Escolha seu voto
                 </h2>
-                
+
                 {roomState.areCardsRevealed ? (
                   <div className="text-center py-8 text-gray-600 dark:text-gray-400">
                     Aguarde uma nova rodada para votar
@@ -321,7 +330,7 @@ export const Room: React.FC = () => {
                     ))}
                   </div>
                 )}
-                
+
                 {hasVoted && !roomState.areCardsRevealed && (
                   <p className="mt-4 text-center text-sm text-green-600 dark:text-green-400 flex items-center justify-center gap-2">
                     <Check className="w-4 h-4" />
@@ -337,7 +346,7 @@ export const Room: React.FC = () => {
                 <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
                   Resultados da Votação
                 </h2>
-                
+
                 <div className="grid md:grid-cols-2 gap-4 mb-6">
                   <div className="bg-gradient-to-br from-blue-50 to-primary-50 dark:from-gray-700 dark:to-gray-700 rounded-xl p-4">
                     <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Mais Votado</p>
@@ -345,7 +354,7 @@ export const Room: React.FC = () => {
                       {stats.mostCommon}
                     </p>
                   </div>
-                  
+
                   <div className="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-gray-700 dark:to-gray-700 rounded-xl p-4">
                     <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Total de Votos</p>
                     <p className="text-3xl font-bold text-purple-600 dark:text-purple-400">
@@ -385,7 +394,7 @@ export const Room: React.FC = () => {
                 <User className="w-5 h-5" />
                 Jogadores ({players.length})
               </h2>
-              
+
               <div className="space-y-2">
                 {players.map((user) => (
                   <div
@@ -398,7 +407,7 @@ export const Room: React.FC = () => {
                         {user.name} {user.name === userName && '(você)'}
                       </span>
                     </div>
-                    
+
                     <div className="flex items-center gap-2">
                       {roomState.areCardsRevealed && user.vote ? (
                         <span className="px-3 py-1 bg-primary-600 text-white rounded-lg font-bold">
@@ -409,7 +418,7 @@ export const Room: React.FC = () => {
                       ) : (
                         <div className="w-8 h-10 bg-gray-300 dark:bg-gray-600 rounded opacity-30"></div>
                       )}
-                      
+
                       {isOwner && user.name !== userName && (
                         <button
                           onClick={() => handleTransferOwnership(user.name)}
@@ -432,7 +441,7 @@ export const Room: React.FC = () => {
                   <Eye className="w-5 h-5" />
                   Espectadores ({spectators.length})
                 </h2>
-                
+
                 <div className="space-y-2">
                   {spectators.map((user) => (
                     <div
@@ -459,7 +468,7 @@ export const Room: React.FC = () => {
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
               Configurações da Sala
             </h2>
-            
+
             <div className="space-y-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
@@ -470,11 +479,10 @@ export const Room: React.FC = () => {
                     <button
                       key={pkg.id}
                       onClick={() => handleChangeVotePackage(pkg.id)}
-                      className={`w-full p-4 rounded-lg text-left transition-colors ${
-                        roomState.votePackage.id === pkg.id
-                          ? 'bg-primary-100 dark:bg-primary-900/30 border-2 border-primary-600 dark:border-primary-500'
-                          : 'bg-gray-50 dark:bg-gray-700 border-2 border-transparent hover:border-gray-300 dark:hover:border-gray-600'
-                      }`}
+                      className={`w-full p-4 rounded-lg text-left transition-colors ${roomState.votePackage.id === pkg.id
+                        ? 'bg-primary-100 dark:bg-primary-900/30 border-2 border-primary-600 dark:border-primary-500'
+                        : 'bg-gray-50 dark:bg-gray-700 border-2 border-transparent hover:border-gray-300 dark:hover:border-gray-600'
+                        }`}
                     >
                       <div className="font-semibold text-gray-900 dark:text-white mb-1">
                         {pkg.name}
